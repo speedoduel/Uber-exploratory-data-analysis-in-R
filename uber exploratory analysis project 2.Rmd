@@ -1,0 +1,282 @@
+---
+title: "Uber Exploratory Analysis"
+author: "Ronak"
+date: "6/1/2020"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+---
+Many of the Fortune 500 companies need data analytics to make better insights in running their especially a massive corporate enterprise like Uber can use it too to scale and chart out places where the traffic and accordingly put a differing fare for those spots and also be placing more drivers in that region to handle the high customer demand. Here we have done just that we imported the data sets containing the uber travel records and just tried to clean the data and make insights on how has does different dates and months affect the company and it's cab requests
+
+```{r}
+library(ggplot2)
+library(ggthemes)
+library(lubridate)
+library(dplyr)
+library(tidyr)
+library(DT)
+library(scales)
+```
+So first we import the required libraries
+
+```{r}
+colors = c("#CC1011", "#665555", "#05a399", "#cfcaca", "#f5e840", "#0683c9", "#e075b0")
+```
+Then we set a regulated color schema so graphs looks more elegant and are able to depict better visually
+```{r}
+apr_data<-read.csv("uber_apr14.csv")
+may_data<-read.csv("uber_may14.csv")
+jun_data<-read.csv("uber_jun14.csv")
+jul_data<-read.csv("uber_jul14.csv")
+aug_data<-read.csv("uber_aug14.csv")
+sep_data<-read.csv("uber_sep14.csv")
+```
+After this we import all the requested CSV files
+
+```{r}
+    head(data_2014)
+    data_2014 <- rbind(apr_data,may_data, jun_data, jul_data, aug_data, sep_data)
+    data_2014$Date.Time <- as.POSIXct(data_2014$Date.Time, format = "%m/%d/%Y %H:%M:%S")
+    data_2014$Time <- format(as.POSIXct(data_2014$Date.Time, format = "%m/%d/%Y %H:%M:%S"), format="%H:%M:%S")
+    data_2014$Date.Time <- ymd_hms(data_2014$Date.Time)
+    data_2014$day <- factor(day(data_2014$Date.Time))
+    data_2014$month <- factor(month(data_2014$Date.Time, label = TRUE))
+    data_2014$year <- factor(year(data_2014$Date.Time))
+    data_2014$dayofweek <- factor(wday(data_2014$Date.Time, label = TRUE))
+```
+After importing the files we combine them to see them and we notice the base of all these files and how they have been distributed we notice that we will hav to seperate the date and time and in order to make the data easier for us to analyze. After looking at the head we notice variable Base which after researching a little i found out are the names of spot/hubs where uber keeps most of their cars before they are assigned a route
+
+```{r}
+head(data_2014)
+```
+so as you can we see we are separating the data into months days and days of the week along with the time 
+
+```{r}
+data_2014$hour <- factor(hour(hms(data_2014$Time)))
+data_2014$minute <- factor(minute(hms(data_2014$Time)))
+data_2014$second <- factor(second(hms(data_2014$Time)))
+```
+Now we just divide the data into the hours and minutes and seconds to see the most common hours and minutes
+```{r}
+head(data_2014)
+```
+we will use the ggplot function to plot the number of trips that the passengers had made in a day. We will also use dplyr to aggregate our data. In the resulting visualizations, we can try to interpret number of customer throughout the day and throughout the month
+```{r}
+hour_data<- data_2014%>%
+    group_by(hour)%>%
+    dplyr::summarise(Total=n())
+datatable(hour_data)
+```
+
+
+```{r}
+ggplot(hour_data, aes(hour,Total))+geom_bar(stat="identity",fill="black",color="green")+
+    ggtitle("Trips Every Hour")+
+    theme(legend.position = "none")+
+    scale_y_continuous(labels=comma)
+month_hour<- data_2014 %>%
+    group_by(month,hour)%>%
+    dplyr::summarise(Total=n())
+ggplot(month_hour,aes(hour,Total,fill=month))+
+    geom_bar(stat="identity")+
+    ggtitle("Trips by hour and month")+
+    scale_y_continuous(labels=comma)
+    
+```
+After this we look into the most common hours for travel by each month and we notice that value is highest in the month of september usually from 5-6pm which is very nice insight on the basis of this uber can give a minor increment in the fair of each ride in that time period.
+
+```{r}
+day_2014<-data_2014 %>%
+    group_by(day)%>%
+    dplyr::summarise(Total=n())
+datatable(day_2014)
+```
+Here  we group the data by days to see the number of trips each day 
+
+```{r}
+ggplot(day_2014,aes(day,Total))+
+    geom_bar(stat="identity",fill="darkblue")+
+    ggtitle("Trips Every Day")+
+    theme(legend.position = "none")+
+    scale_y_continuous(labels=comma)
+
+```
+here we begin to see that the most common day to travel is 30th of each month while 31st is least but that could be because half of the months don't have 31 days so we will ignore it and look at the 1st of each month which is lower than any other date other than 31st so we need to keep the rides fairly cheaper on 1st to compete with lyft and other local taxi services
+```{r}
+    day_month_group <- data_2014 %>%
+             group_by(month, dayofweek) %>%
+                 dplyr::summarize(Total = n())
+    ggplot(day_month_group, aes(month, Total, fill = dayofweek)) + 
+            geom_bar( stat = "identity",position = "dodge") +
+               ggtitle("Trips by Day and Month") +
+                scale_y_continuous(labels = comma) +
+                scale_fill_manual(values = colors)
+    
+```
+
+Now charting them by month we begin to a clear pattern here however there are discrepancies the most common day for commute was Wednesday but weirdly by September here we must remember that there is an overall increment in all the values of the commutes this is can be only because of increase in the use of app as more users are getting to know about it so Sunday has been the day with the lowest commutes being taken place from our app.
+Also June as a month is having far lower commutes than May one possible reason for this could be 2014 FIFA world cup that took place month June.
+However this is just my hunch
+By september more and more younger crowd started using the applications for more casual use such as travelling and venturing out for fun instead of just using uber for work commute
+```{r}
+month_data<- data_2014 %>%
+    group_by(month)%>%
+        dplyr::summarise(Total=n())
+datatable(month_data)
+```
+Separating the data by month
+```{r}
+ ggplot(month_data, aes(month, Total, fill =month)) + 
+            geom_bar( stat = "identity") +
+               ggtitle("Trips by Month") +
+                scale_y_continuous(labels = comma)+
+                 scale_fill_manual(values=colors)
+                
+```
+Charting their overall growth per month we can notice September has twice as many commutes taking place as compared to April and we can only presume it could be increase only from general increase in the customers of the application
+
+```{r}
+    ggplot(day_month_group, aes(dayofweek, Total, fill = month)) + 
+            geom_bar( stat = "identity",position = "dodge") +
+               ggtitle("Trips by Day and Month") +
+                scale_y_continuous(labels = comma) +
+                scale_fill_manual(values = colors)
+```
+Now coming down to the day and month we start to notice more patterns emerge if we remove the September cases and just look at the other months so now we can make notice of that
+work days for commute were generally most popular for July  like the most important days were Tuesday, Wednesday and Thursday while weekends ended up becoming more and more important for during the last 2 months such as August and September. June seems to be low for all the months and i still presume it can be because of the world cup as more people world have stayed home and relaxed and watched TV.
+
+```{r}
+ggplot(data_2014, aes(Base))+
+    geom_bar(fill="darkgreen")+
+    scale_y_continuous(labels=comma)+
+    ggtitle("Trips by bases")
+```
+As we can notice that that the Least common bases are B02512 and B02764 respectively and these months are so low that they combined will still be just one third of the Base B02598. Hence we must deploy more vehicles to the Base B02617 and B02598.
+```{r}
+ggplot(data_2014,aes(Base, fill=month))+
+    geom_bar(position = "dodge")+
+    scale_y_continuous(labels=comma)+
+    ggtitle("Trips by bases per month")+
+    scale_fill_manual(values=colors)
+    
+```
+Now when we come to the separation of base by per month we come to notice that base B02764 has a potential to increase while the base B02512 has none to very low potential to increase so we will have to provide more offers in that region. B02598 is also very stagnant for each months however the B02617 has grown significantly each and every time and shown as massive spot for future growth too with each month bringing in more and more customers 
+
+```{r}
+ggplot(data_2014,aes(Base,fill=dayofweek))+
+    geom_bar(position="dodge")+
+    scale_y_continuous(labels=comma)+
+    ggtitle("Trips by day per work")+
+    scale_fill_manual(values=colors)
+```
+Now we look at the most common days to book a ride and we make the same relation that Sunday is the least common day for commute while Thursday is weirdly the most common day which could because of the fact that on an average among all month the most common for day commute for every month is Thursday
+
+```{r}
+day_hour_data<-data_2014 %>%
+    group_by(day,hour) %>%
+    dplyr::summarise(Total=n())
+datatable(day_hour_data)
+ggplot(day_hour_data, aes(day,hour,fill=Total))+
+    geom_tile(color="black")+
+    ggtitle("Heat map by hour and day")
+```
+Heat map infrences here we can notice that the most of the people are travelling on the 30th however very few are using the commute via Uber for 1st
+```{r}
+datatable(day_month_group)
+ggplot(day_month_group,aes(dayofweek, month, fill=Total))+
+    geom_tile(color="black")+
+    ggtitle("heatmap of day of week the month")
+```
+the most common days is by far the Saturday of September and other than this you can also notice may had relatively high number of commutes on Thursdays and Fridays while July had high commute from Tuesday to Thursday and then August had a high commute on the weekends
+
+```{r}
+date_month<-data_2014 %>%
+    group_by(day, month)%>%
+    dplyr::summarise(Total=n())
+ggplot(date_month,aes(day, month, fill=Total))+
+    geom_tile(color="black")+
+    ggtitle("heatmap of day of the month")
+
+```
+We can notice the dark spots here in this data set and make out insights that probably because of memorial days preparation
+July5-6th is also having low commute and so is jun 14-17
+```{r}
+Base_month<-data_2014 %>%
+    group_by(Base, month)%>%
+    dplyr::summarise(Total=n())
+Base_days<-data_2014%>%
+    group_by(Base, dayofweek)%>%
+    dplyr::summarise(Total=n())
+datatable(Base_days)
+datatable(Base_month)
+
+```
+
+```{r}
+ggplot(Base_month,aes(Base,month,fill=Total))+
+    geom_tile(color="black")+
+    ggtitle("Heatmap between base and the months")
+ggplot(Base_days,aes(Base,dayofweek,fill=Total))+
+    geom_tile(color="black")+
+    ggtitle("Heatmap between base and the days of week")
+
+```
+Here the visualisations are same as the graph we made earlier so not much overall differnce for either or them
+```{r}
+min_lat<- 40.5774
+max_lat<- 40.9176
+min_long<- -74.15
+max_long<- -73.7004
+
+
+
+ggplot(data_2014,aes(Lon,Lat, color= month,shape=Base))+
+    geom_point(size=0.7)+
+    scale_x_continuous(limits=c(min_long,max_long))+
+    scale_y_continuous(limits=c(min_lat,max_lat))+
+    theme_map()+
+    ggtitle("NYC map based on 2014 uber rides")
+
+
+```
+we do our first map and we get to notice that most of the rides took place everwhere in september because of more general downloads
+```{r}
+ggplot(data_2014,aes(Lon,Lat, color= dayofweek,shape=Base))+
+    geom_point(size=0.7)+
+    scale_x_continuous(limits=c(min_long,max_long))+
+    scale_y_continuous(limits=c(min_lat,max_lat))+
+    theme_map()+
+    ggtitle("NYC map based on 2014 uber rides")+
+    scale_fill_manual(values= colors)
+```
+Here we see something interesting the tri-state area has a massive influx of commuters on Monday and it's all aggregated in one spot as if this is the official working hub of the city. This is a very interesting sight as almost all other rides are distributed for different days and bases and have a massive spread but we clearly can mark our audience for Monday in New york
+
+
+```{r}
+ggplot(data_2014,aes(Lon,Lat, color= dayofweek,shape=Base,alpha=2/3))+
+    geom_point(size=0.7)+
+    scale_x_continuous(limits=c(min_long,max_long))+
+    scale_y_continuous(limits=c(min_lat,max_lat))+
+    theme_map()+
+    ggtitle("NYC map based on 2014 uber rides")+
+    scale_fill_manual(values=colors)
+```
+
+To see the data in more depth we decreased the opacity the results are similar but can clearly chart out that this area is containing the most important landmarks like Empire state building the and the lower manhatten so we must also include the fact this is home to time square a hub to not only people who work but also tourists hence making this area full of opportunities and you can see even Brooklyn is massively effected by this high tide of office workers and tourists and this same flock of people is not visible in newark or anywhere else
+
+## END HYPOTHESIS
+
+Here we come to realize the bases with the highest potential along with the days with the most amount of active of active users and Uber is showing a steady growth overall in the number of commutes for 3 of the 5 bases we discussed along with this we also found out the most common days for our consumers which is Thursdays and Saturdays and along with this we even made conclusions on the most frequent hours for our travelers as well we could chart out the map and clearly make out the that our monday user are aggregated in one specific area the lower manhatten this can involve lots of tourists and other office workers alike 
+
+
+## SUMMARY
+Here in this project
+I installed the required libraries 
+binded the data together using rbind
+I alloted a seperate set of colors which i later gave to my graphs to increase their color assortment for a better viewing of the data
+cleaned and preprocessed the data separated the date and columns
+I made several smaller datasets to make easy grouping of data by group by
+I made bar graphs on all possible relations between the data set and analyzed and researched the reason behind each day of loss
+I also made heatmaps all of the previously discussed matters of importance to find more patterns 
+Finally I made a map of the entire newyork city on the basis of longitude and latitude which i then utilized the map to get find if one common area had a large number of commutes on a specific and that turned out to be monday here in lower manhatten 
