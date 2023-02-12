@@ -5,7 +5,7 @@
 ### Steps and Insights made in this project
 - Employed multiple data analysis libraries in R such as Tidyr, DT, ggthemes, ggplot, lubridate, scales
 - Join different CSV files factored in the Data and Cleaned it
-- inded the data together using rbind
+- Binded the data together using rbind
 - I alloted a seperate set of colors which i later gave to my graphs to increase their color assortment for a better viewing of the data
 - cleaned and preprocessed the data separated the date and columns
 - I made several smaller datasets to make easy grouping of data by group by
